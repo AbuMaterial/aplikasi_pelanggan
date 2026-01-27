@@ -24,14 +24,28 @@
         .history-card { background: white; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-        /* CSS BARU: Tombol Sticky & Animasi Berkedip */
+        /* ANIMASI STICKY & MANUAL */
         .sticky-bottom-manual { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; z-index: 100; transition: all 0.3s; }
         @keyframes highlight-blink {
-            0% { transform: scale(1); background-color: #facc15; } /* Yellow-400 */
-            50% { transform: scale(1.05); background-color: #ffffff; } /* White */
+            0% { transform: scale(1); background-color: #facc15; }
+            50% { transform: scale(1.02); background-color: #ffffff; }
             100% { transform: scale(1); background-color: #facc15; }
         }
         .btn-manual-blink { animation: highlight-blink 0.8s infinite; border: 3px solid #ca8a04 !important; color: #854d0e !important; }
+
+        /* FITUR BARU: EFEK KERANJANG AKTIF */
+        @keyframes cart-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-cart { animation: cart-bounce 0.6s infinite; }
+
+        @keyframes btn-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .btn-order-pulse { animation: btn-pulse 1.5s infinite; background-color: #22c55e !important; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -63,7 +77,8 @@
         </div>
     </div>
 
-    <div id="screen-main" class="hidden min-h-screen pb-24"> <nav class="wa-green text-white p-5 sticky top-0 z-50 shadow-lg flex justify-between items-center">
+    <div id="screen-main" class="hidden min-h-screen pb-24"> 
+        <nav class="wa-green text-white p-5 sticky top-0 z-50 shadow-lg flex justify-between items-center">
             <div>
                 <h2 id="display-nama-toko" class="font-bold text-lg leading-tight uppercase"></h2>
                 <div class="flex items-center gap-1 text-[10px] text-green-200 mb-2">
@@ -75,17 +90,27 @@
                     <button onclick="showTab('riwayat')" id="tab-riwayat" class="text-[10px] border border-white text-white px-3 py-1.5 rounded-full font-bold uppercase transition-all">Riwayat</button>
                 </div>
             </div>
-            <button onclick="toggleKeranjang()" class="relative p-2">
+            <button onclick="toggleKeranjang()" id="cart-icon-btn" class="relative p-2 transition-all">
                 <i class="fa fa-shopping-cart text-2xl"></i>
                 <span id="cart-count" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full">0</span>
             </button>
         </nav>
 
         <div id="content-katalog">
+            <div id="reminder-keranjang" class="hidden bg-orange-500 text-white text-[10px] font-bold text-center py-2 uppercase tracking-widest sticky top-[154px] z-30">
+                <i class="fa fa-info-circle"></i> Ada pesanan di keranjang yang belum dikirim!
+            </div>
+
             <div class="p-4 bg-white shadow-sm sticky top-[88px] z-40">
                 <div class="relative">
                     <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     <input type="text" id="input-cari" oninput="logicCari(this.value)" placeholder="Cari produk..." class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl outline-none border-2 focus:border-green-600 font-medium">
+                </div>
+                <div id="hasil-kosong" class="hidden mt-3">
+                    <button onclick="bukaModalManual()" class="btn-manual-blink w-full py-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa fa-exclamation-circle text-lg"></i>
+                        <span>Produk tidak ada? Klik Order Manual di Sini</span>
+                    </button>
                 </div>
             </div>
             <div class="p-4 grid grid-cols-2 gap-4" id="container-produk"></div>
@@ -108,18 +133,15 @@
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 flex flex-col shadow-2xl">
             <h3 class="font-black text-xl mb-2 uppercase">ORDER MANUAL</h3>
             <p class="text-[10px] text-gray-500 mb-4 font-bold uppercase">Tulis barang yang tidak ada di katalog</p>
-            
             <div id="container-input-manual" class="space-y-3 max-h-[40vh] overflow-y-auto mb-4 p-1">
                 <div class="flex gap-2 items-start baris-manual">
-                    <input type="text" placeholder="Nama Barang..." class="nama-manual flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none border focus:border-blue-500 font-bold">
+                    <input type="text" placeholder="Nama Barang..." class="nama-manual flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none border focus:border-blue-500 font-bold uppercase">
                     <input type="number" placeholder="Qty" class="qty-manual w-20 p-3 bg-gray-100 rounded-xl text-sm text-center outline-none border focus:border-blue-500 font-bold">
                 </div>
             </div>
-
             <button onclick="tambahBarisManual()" class="text-blue-600 font-bold text-[10px] uppercase mb-6 flex items-center gap-2">
                 <i class="fa fa-plus-circle text-lg"></i> TAMBAH BARANG LAIN
             </button>
-
             <div class="flex gap-2">
                 <button onclick="tutupModalManual()" class="flex-1 py-4 bg-gray-200 rounded-2xl font-bold uppercase text-xs">Batal</button>
                 <button onclick="masukkanManualKeKeranjang()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold uppercase text-xs shadow-lg">Masukan Keranjang</button>
@@ -136,7 +158,7 @@
             <div id="list-keranjang" class="flex-1 overflow-y-auto space-y-3 mb-4"></div>
             <div class="border-t pt-4">
                 <div class="flex justify-between font-bold text-lg mb-4"><span>TOTAL</span><span id="total-harga">Rp 0</span></div>
-                <button onclick="kirimOrder()" id="btn-kirim" class="w-full wa-green text-white py-4 rounded-2xl font-bold uppercase">Proses Order</button>
+                <button onclick="kirimOrder()" id="btn-kirim" class="w-full wa-green text-white py-4 rounded-2xl font-bold uppercase transition-all">Proses Order</button>
             </div>
         </div>
     </div>
@@ -153,11 +175,10 @@
     </div>
 
     <script>
-        // --- KONFIGURASI ---
         const scriptURL = "https://script.google.com/macros/s/AKfycby_5wpUR444IYzeo-hKkbaZ5YjX53V_UE_Vxfe0o8XhlEJnuKLlIec7lVDYa7E_iKUI7w/exec";
         let dataToko = null, listProduk = [], keranjang = [], produkDipilih = null, coords = { lat: 0, lng: 0 };
 
-        // --- ONESIGNAL INIT ---
+        // ONESIGNAL INIT
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
@@ -165,7 +186,6 @@
                 allowLocalhostAsSecureOrigin: true,
                 notifyButton: { enable: false },
             });
-
             const saveId = () => {
                 const userId = OneSignal.User.PushSubscription.id;
                 if (userId) {
@@ -177,30 +197,13 @@
             saveId();
         });
 
-        // --- PWA SERVICE WORKER ---
         if ('serviceWorker' in navigator && location.protocol !== 'file:') {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW Registered'))
-                    .catch(err => console.log('SW Failed', err));
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Failed', err));
             });
         }
 
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            setTimeout(() => {
-                if(confirm("Pasang Aplikasi ABU MATERIAL di HP Anda?")) {
-                    deferredPrompt.prompt();
-                    deferredPrompt = null;
-                }
-            }, 5000);
-        });
-
-        // --- CORE FUNCTIONS ---
         function simpanKeranjang() { localStorage.setItem('abu_keranjang', JSON.stringify(keranjang)); }
-        
         function muatKeranjang() {
             const saved = localStorage.getItem('abu_keranjang');
             if (saved) { keranjang = JSON.parse(saved); updateCartUI(); }
@@ -209,16 +212,9 @@
         async function cekAksesToko() {
             const hp = document.getElementById('input-hp').value;
             if(!hp) return alert("Masukkan Nomor HP!");
-
-            if (window.OneSignal) {
-                OneSignalDeferred.push(async function(OneSignal) {
-                    await OneSignal.Notifications.requestPermission();
-                });
-            }
-
+            if (window.OneSignal) { OneSignalDeferred.push(async function(OS) { await OS.Notifications.requestPermission(); }); }
             const btn = document.getElementById('btn-cek');
             btn.innerHTML = `<div class="loader mx-auto"></div>`; btn.disabled = true;
-            
             try {
                 const res = await fetch(`${scriptURL}?action=cekToko&hp=${hp}`);
                 const data = await res.json();
@@ -231,7 +227,7 @@
                     document.getElementById('screen-daftar').classList.remove('hidden');
                     ambilLokasi();
                 }
-            } catch (e) { alert("Koneksi gagal. Pastikan anda menggunakan internet."); }
+            } catch (e) { alert("Koneksi gagal."); }
             btn.innerHTML = "Cek Akses"; btn.disabled = false;
         }
 
@@ -257,18 +253,12 @@
             const pemilik = document.getElementById('reg-pemilik').value;
             const kec = document.getElementById('reg-kecamatan').value;
             if(!nama || !pemilik) return alert("Lengkapi data toko!");
-
             const btn = document.getElementById('btn-daftar');
             btn.innerText = "MENDAFTAR..."; btn.disabled = true;
-
             const tokenOS = localStorage.getItem('abu_token_push') || "";
             const payload = { hp: hp, nama_toko: nama, nama_pemilik: pemilik, kecamatan: kec, lat: coords.lat, lng: coords.lng, sales: "MANDIRI", token_push: tokenOS };
-            
             try {
-                await fetch(scriptURL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ fungsi: "simpanPelanggan", data: payload }) 
-                });
+                await fetch(scriptURL, { method: 'POST', body: JSON.stringify({ fungsi: "simpanPelanggan", data: payload }) });
                 dataToko = payload;
                 localStorage.setItem('abu_toko', JSON.stringify(dataToko));
                 initApp();
@@ -279,15 +269,12 @@
         async function initApp() {
             if(!dataToko) dataToko = JSON.parse(localStorage.getItem('abu_toko'));
             if(!dataToko) return;
-            
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('screen-daftar').classList.add('hidden');
             document.getElementById('screen-main').classList.remove('hidden');
-            document.getElementById('btn-manual-sticky').classList.remove('hidden'); // Munculkan tombol sticky
-            
+            document.getElementById('btn-manual-sticky').classList.remove('hidden');
             document.getElementById('display-nama-toko').innerText = dataToko.nama_toko;
             document.getElementById('display-kecamatan').innerText = dataToko.kecamatan || "Lokasi Toko";
-            
             try {
                 const res = await fetch(`${scriptURL}?action=getInitialData`);
                 const data = await res.json();
@@ -301,21 +288,15 @@
         async function updateTokenKeSheet() {
             const tokenOS = localStorage.getItem('abu_token_push');
             if (tokenOS && dataToko?.hp) {
-                fetch(scriptURL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ fungsi: "updateTokenPush", hp: dataToko.hp, token: tokenOS })
-                });
+                fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ fungsi: "updateTokenPush", hp: dataToko.hp, token: tokenOS }) });
             }
         }
 
-        // --- UI LOGIC ---
         function showTab(tab) {
             const isKatalog = (tab === 'katalog');
             document.getElementById('content-katalog').classList.toggle('hidden', !isKatalog);
             document.getElementById('content-riwayat').classList.toggle('hidden', isKatalog);
-            document.getElementById('btn-manual-sticky').classList.toggle('hidden', !isKatalog); // Sticky hanya di katalog
-            
+            document.getElementById('btn-manual-sticky').classList.toggle('hidden', !isKatalog);
             document.getElementById('tab-katalog').className = isKatalog ? "text-[10px] bg-white text-green-900 px-3 py-1.5 rounded-full font-bold uppercase" : "text-[10px] border border-white text-white px-3 py-1.5 rounded-full font-bold uppercase";
             document.getElementById('tab-riwayat').className = !isKatalog ? "text-[10px] bg-white text-green-900 px-3 py-1.5 rounded-full font-bold uppercase" : "text-[10px] border border-white text-white px-3 py-1.5 rounded-full font-bold uppercase";
             if(!isKatalog) muatRiwayatServer();
@@ -328,28 +309,24 @@
                 const res = await fetch(`${scriptURL}?action=getRiwayat&hp=${dataToko.hp}`);
                 const data = await res.json();
                 if(!data || data.length === 0) { container.innerHTML = "<p class='text-center py-10 text-gray-400 font-bold'>Belum ada pesanan.</p>"; return; }
-                container.innerHTML = data.map(order => `
-                    <div class="history-card">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-[10px] bg-gray-100 px-2 py-1 rounded font-bold text-gray-500">${order.tanggal}</span>
-                            <span class="text-[10px] font-black text-green-700 uppercase">${order.status}</span>
-                        </div>
-                        <p class="text-xs font-bold text-gray-700">${order.items_ringkas}</p>
-                    </div>
-                `).join('');
+                container.innerHTML = data.map(order => `<div class="history-card"><div class="flex justify-between items-start mb-2"><span class="text-[10px] bg-gray-100 px-2 py-1 rounded font-bold text-gray-500">${order.tanggal}</span><span class="text-[10px] font-black text-green-700 uppercase">${order.status}</span></div><p class="text-xs font-bold text-gray-700">${order.items_ringkas}</p></div>`).join('');
             } catch (e) { container.innerHTML = "Gagal memuat."; }
         }
 
-        // MODIFIKASI: Logic cari dengan animasi berkedip
         function logicCari(q) {
             const hasil = listProduk.filter(p => p[1].toLowerCase().includes(q.toLowerCase()));
             renderProduk(hasil);
-
-            const btnManual = document.getElementById('inner-btn-manual');
+            const areaKosong = document.getElementById('hasil-kosong');
+            const containerProd = document.getElementById('container-produk');
+            const btnSticky = document.getElementById('btn-manual-sticky');
             if(q.length > 0 && hasil.length === 0) {
-                btnManual.classList.add('btn-manual-blink');
+                areaKosong.classList.remove('hidden');
+                containerProd.classList.add('hidden');
+                btnSticky.classList.add('hidden');
             } else {
-                btnManual.classList.remove('btn-manual-blink');
+                areaKosong.classList.add('hidden');
+                containerProd.classList.remove('hidden');
+                if(!document.getElementById('content-katalog').classList.contains('hidden')) btnSticky.classList.remove('hidden');
             }
         }
 
@@ -357,62 +334,35 @@
             const container = document.getElementById('container-produk');
             container.innerHTML = data.map((p) => {
                 const idxAsli = listProduk.findIndex(x => x[1] === p[1]);
-                return `
-                <div onclick="pilihProduk(${idxAsli})" class="bg-white p-3 rounded-3xl shadow-sm border active:scale-95 transition-transform">
-                    <img src="${p[4]}" class="w-full h-24 object-cover rounded-2xl mb-2 bg-gray-50">
-                    <h4 class="font-bold text-[10px] uppercase h-8 overflow-hidden leading-tight">${p[1]}</h4>
-                    <p class="text-sm font-black text-green-700">Rp ${Number(p[7]).toLocaleString()}</p>
-                </div>`;
+                return `<div onclick="pilihProduk(${idxAsli})" class="bg-white p-3 rounded-3xl shadow-sm border active:scale-95 transition-transform"><img src="${p[4]}" class="w-full h-24 object-cover rounded-2xl mb-2 bg-gray-50"><h4 class="font-bold text-[10px] uppercase h-8 overflow-hidden leading-tight">${p[1]}</h4><p class="text-sm font-black text-green-700">Rp ${Number(p[7]).toLocaleString()}</p></div>`;
             }).join('');
         }
 
-        // --- FUNGSI BARU UNTUK ORDER MANUAL ---
         function bukaModalManual() { document.getElementById('modal-manual').classList.add('active'); }
         function tutupModalManual() { document.getElementById('modal-manual').classList.remove('active'); }
-        
         function tambahBarisManual() {
             const container = document.getElementById('container-input-manual');
             const div = document.createElement('div');
             div.className = "flex gap-2 items-start baris-manual";
-            div.innerHTML = `
-                <input type="text" placeholder="Nama Barang..." class="nama-manual flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none border focus:border-blue-500 font-bold">
-                <input type="number" placeholder="Qty" class="qty-manual w-20 p-3 bg-gray-100 rounded-xl text-sm text-center outline-none border focus:border-blue-500 font-bold">
-                <button onclick="this.parentElement.remove()" class="p-3 text-red-500"><i class="fa fa-times text-lg"></i></button>
-            `;
+            div.innerHTML = `<input type="text" placeholder="Nama Barang..." class="nama-manual flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none border focus:border-blue-500 font-bold uppercase"><input type="number" placeholder="Qty" class="qty-manual w-20 p-3 bg-gray-100 rounded-xl text-sm text-center outline-none border focus:border-blue-500 font-bold"><button onclick="this.parentElement.remove()" class="p-3 text-red-500"><i class="fa fa-times text-lg"></i></button>`;
             container.appendChild(div);
         }
 
         function masukkanManualKeKeranjang() {
             const baris = document.querySelectorAll('.baris-manual');
             let adaInput = false;
-
             baris.forEach(el => {
                 const nama = el.querySelector('.nama-manual').value;
                 const qty = el.querySelector('.qty-manual').value;
                 if(nama && qty > 0) {
-                    keranjang.push({ 
-                        nama_produk: "(MANUAL) " + nama.toUpperCase(), 
-                        qty_pesan: qty, 
-                        harga: 0 // Harga 0 untuk item manual agar admin cek manual
-                    });
+                    keranjang.push({ nama_produk: "(MANUAL) " + nama.toUpperCase(), qty_pesan: qty, harga: 0 });
                     adaInput = true;
                 }
             });
-
             if(adaInput) {
-                updateCartUI();
-                simpanKeranjang();
-                tutupModalManual();
-                // Reset form manual
-                document.getElementById('container-input-manual').innerHTML = `
-                    <div class="flex gap-2 items-start baris-manual">
-                        <input type="text" placeholder="Nama Barang..." class="nama-manual flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none border focus:border-blue-500 font-bold">
-                        <input type="number" placeholder="Qty" class="qty-manual w-20 p-3 bg-gray-100 rounded-xl text-sm text-center outline-none border focus:border-blue-500 font-bold">
-                    </div>`;
-                alert("Pesanan manual ditambahkan ke keranjang!");
-            } else {
-                alert("Isi nama barang dan jumlah!");
-            }
+                updateCartUI(); simpanKeranjang(); tutupModalManual();
+                document.getElementById('container-input-manual').innerHTML = `<div class="flex gap-2 items-start baris-manual"><input type="text" placeholder="Nama Barang..." class="nama-manual flex-1 p-3 bg-gray-100 rounded-xl text-sm outline-none border focus:border-blue-500 font-bold uppercase"><input type="number" placeholder="Qty" class="qty-manual w-20 p-3 bg-gray-100 rounded-xl text-sm text-center outline-none border focus:border-blue-500 font-bold"></div>`;
+            } else { alert("Isi data!"); }
         }
 
         function pilihProduk(idx) {
@@ -422,9 +372,7 @@
             document.getElementById('modal-qty').classList.add('active');
             setTimeout(() => document.getElementById('input-qty').focus(), 300);
         }
-
         function tutupQty() { document.getElementById('modal-qty').classList.remove('active'); }
-
         function tambahkanKeKeranjang() {
             const qty = document.getElementById('input-qty').value;
             if(!qty || qty <= 0) return;
@@ -432,20 +380,31 @@
             updateCartUI(); simpanKeranjang(); tutupQty();
         }
 
+        // FUNGSI UPDATE UI KERANJANG DENGAN EFEK KHUSUS
         function updateCartUI() {
-            document.getElementById('cart-count').innerText = keranjang.length;
+            const count = keranjang.length;
+            document.getElementById('cart-count').innerText = count;
+            
+            // Efek Ikon Keranjang & Reminder Bar
+            const icon = document.getElementById('cart-icon-btn');
+            const reminder = document.getElementById('reminder-keranjang');
+            const btnProses = document.getElementById('btn-kirim');
+
+            if (count > 0) {
+                icon.classList.add('animate-bounce-cart');
+                reminder.classList.remove('hidden');
+                btnProses.classList.add('btn-order-pulse');
+            } else {
+                icon.classList.remove('animate-bounce-cart');
+                reminder.classList.add('hidden');
+                btnProses.classList.remove('btn-order-pulse');
+            }
+
             let total = 0;
             document.getElementById('list-keranjang').innerHTML = keranjang.map((item, i) => {
                 total += (item.qty_pesan * item.harga);
                 const isManual = item.nama_produk.includes("(MANUAL)");
-                return `
-                <div class="flex justify-between items-center ${isManual ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'} p-3 rounded-2xl">
-                    <div class="flex-1 font-bold text-[10px] pr-2">${item.nama_produk} ${isManual ? '<br><span class="text-blue-600">[Cek Harga Admin]</span>' : ''}</div>
-                    <div class="flex items-center gap-2">
-                        <input type="number" onchange="keranjang[${i}].qty_pesan=this.value;updateCartUI();simpanKeranjang()" value="${item.qty_pesan}" class="w-12 p-1 rounded border text-center text-xs font-bold">
-                        <button onclick="keranjang.splice(${i},1);updateCartUI();simpanKeranjang()" class="text-red-500 p-2"><i class="fa fa-trash"></i></button>
-                    </div>
-                </div>`;
+                return `<div class="flex justify-between items-center ${isManual ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'} p-3 rounded-2xl"><div class="flex-1 font-bold text-[10px] pr-2 uppercase">${item.nama_produk} ${isManual ? '<br><span class="text-blue-600 lowercase">[cek harga admin]</span>' : ''}</div><div class="flex items-center gap-2"><input type="number" onchange="keranjang[${i}].qty_pesan=this.value;updateCartUI();simpanKeranjang()" value="${item.qty_pesan}" class="w-12 p-1 rounded border text-center text-xs font-bold"><button onclick="keranjang.splice(${i},1);updateCartUI();simpanKeranjang()" class="text-red-500 p-2"><i class="fa fa-trash"></i></button></div></div>`;
             }).join('');
             document.getElementById('total-harga').innerText = "Rp " + total.toLocaleString();
         }
@@ -457,26 +416,17 @@
             const btn = document.getElementById('btn-kirim');
             btn.innerText = "MENGIRIM..."; btn.disabled = true;
             try {
-                await fetch(scriptURL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ 
-                        fungsi: "prosesPesanan", 
-                        data: { hp_toko: dataToko.hp, items: keranjang, nama_sales: "APP-TOKO" }
-                    }) 
-                });
+                await fetch(scriptURL, { method: 'POST', body: JSON.stringify({ fungsi: "prosesPesanan", data: { hp_toko: dataToko.hp, items: keranjang, nama_sales: "APP-TOKO" } }) });
                 alert("Order Berhasil Terkirim!");
                 keranjang = []; localStorage.removeItem('abu_keranjang');
                 updateCartUI(); toggleKeranjang();
-            } catch(e) { alert("Gagal mengirim pesanan!"); }
+            } catch(e) { alert("Gagal kirim."); }
             btn.innerText = "Proses Order"; btn.disabled = false;
         }
 
         window.addEventListener('load', () => {
             const savedToko = localStorage.getItem('abu_toko');
-            if (savedToko) {
-                dataToko = JSON.parse(savedToko);
-                initApp();
-            }
+            if (savedToko) { dataToko = JSON.parse(savedToko); initApp(); }
         });
     </script>
 </body>
