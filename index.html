@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#075E54">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1162/1162499.png">
+
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js" defer></script>
+    <script>
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+          appId: "MASUKKAN_APP_ID_ONESIGNAL_ANDA", 
+          safari_web_id: "",
+          notifyButton: { enable: true },
+        });
+
+        OneSignal.User.PushSubscription.addEventListener("change", (event) => {
+            if (event.current.id) {
+                localStorage.setItem('abu_token_push', event.current.id);
+                if (typeof dataToko !== 'undefined' && dataToko) updateTokenKeSheet();
+            }
+        });
+        
+        const userId = OneSignal.User.PushSubscription.id;
+        if (userId) localStorage.setItem('abu_token_push', userId);
+      });
+    </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').then(reg => console.log('SW Reg Success')).catch(err => console.log('SW Reg Fail', err));
+        });
+      }
+
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(() => {
+            if(confirm("Pasang Aplikasi ABU MATERIAL?")) {
+                deferredPrompt.prompt();
+                deferredPrompt = null;
+            }
+        }, 3000);
+      });
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ABU MATERIAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        .wa-green { background-color: #075E54; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+        .modal.active { display: flex; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #075E54; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .history-card { background: white; border-radius: 20px; padding: 15px; margin-bottom: 10px; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div id="screen-auth" class="min-h-screen flex items-center justify-center p-6">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center">
+            <img src="https://cdn-icons-png.flaticon.com/512/1162/1162499.png" class="w-20 mx-auto mb-4">
+            <h1 class="text-2xl font-black mb-2 uppercase">Masuk Toko</h1>
+            <input type="tel" id="input-hp" placeholder="62812345678" class="w-full p-4 bg-gray-50 rounded-2xl mb-4 text-center font-bold text-xl outline-none border-2 focus:border-green-600">
+            <button onclick="cekAksesToko()" id="btn-cek" class="w-full wa-green text-white py-4 rounded-2xl font-bold uppercase shadow-lg">Cek Akses</button>
+        </div>
+    </div>
+
+    <div id="screen-daftar" class="hidden min-h-screen p-6">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-xl max-w-md mx-auto text-center">
+            <h2 class="text-xl font-black mb-6 uppercase">Pendaftaran Toko</h2>
+            <div class="space-y-4">
+                <input type="text" id="reg-nama-toko" placeholder="Nama Toko" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
+                <input type="text" id="reg-pemilik" placeholder="Nama Pemilik" class="w-full p-4 bg-gray-50 border rounded-2xl outline-none">
+                <div class="bg-blue-50 p-4 rounded-2xl border-2 border-blue-100 text-left">
+                    <div class="flex justify-between items-center mb-1">
+                        <p class="text-[10px] text-blue-600 font-bold uppercase">Wilayah / Kecamatan:</p>
+                        <button type="button" onclick="aktifkanEditKecamatan()" class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full uppercase">Edit Manual</button>
+                    </div>
+                    <input type="text" id="reg-kecamatan" readonly placeholder="Mencari lokasi..." class="w-full bg-transparent font-bold outline-none text-gray-700">
+                </div>
+                <button onclick="prosesDaftar()" id="btn-daftar" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase shadow-lg">Daftar & Masuk</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-main" class="hidden min-h-screen">
+        <nav class="wa-green text-white p-5 sticky top-0 z-50 shadow-lg flex justify-between items-center">
+            <div>
+                <h2 id="display-nama-toko" class="font-bold text-lg leading-tight uppercase"></h2>
+                <div class="flex items-center gap-1 text-[10px] text-green-200 mb-2">
+                    <i class="fa fa-map-marker-alt"></i>
+                    <span id="display-kecamatan" class="uppercase tracking-wider">Memuat lokasi...</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="showTab('katalog')" id="tab-katalog" class="text-[10px] bg-white text-green-900 px-3 py-1.5 rounded-full font-bold uppercase transition-all">Katalog</button>
+                    <button onclick="showTab('riwayat')" id="tab-riwayat" class="text-[10px] border border-white text-white px-3 py-1.5 rounded-full font-bold uppercase transition-all">Riwayat</button>
+                </div>
+            </div>
+            <button onclick="toggleKeranjang()" class="relative p-2">
+                <i class="fa fa-shopping-cart text-2xl"></i>
+                <span id="cart-count" class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 rounded-full">0</span>
+            </button>
+        </nav>
+
+        <div id="content-katalog">
+            <div class="p-4 bg-white shadow-sm sticky top-[88px] z-40">
+                <div class="relative">
+                    <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="input-cari" oninput="logicCari(this.value)" placeholder="Cari produk..." class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl outline-none border-2 focus:border-green-600 font-medium">
+                </div>
+            </div>
+            <div class="p-4 grid grid-cols-2 gap-4" id="container-produk"></div>
+        </div>
+
+        <div id="content-riwayat" class="hidden p-4">
+            <h3 class="font-black text-lg mb-4 uppercase">Riwayat Pesanan</h3>
+            <div id="container-riwayat" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <div id="modal-keranjang" class="modal">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-black text-xl">KERANJANG</h3>
+                <button onclick="toggleKeranjang()" class="text-gray-400"><i class="fa fa-times text-xl"></i></button>
+            </div>
+            <div id="list-keranjang" class="flex-1 overflow-y-auto space-y-3 mb-4"></div>
+            <div class="border-t pt-4">
+                <div class="flex justify-between font-bold text-lg mb-4"><span>TOTAL</span><span id="total-harga">Rp 0</span></div>
+                <button onclick="kirimOrder()" id="btn-kirim" class="w-full wa-green text-white py-4 rounded-2xl font-bold uppercase">Proses Order</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-qty" class="modal">
+        <div class="bg-white rounded-[2rem] p-8 w-80 text-center">
+            <h3 id="qty-nama-produk" class="font-bold mb-4 h-10 overflow-hidden"></h3>
+            <input type="number" id="input-qty" class="w-full p-4 bg-gray-100 rounded-xl text-center text-2xl font-bold mb-4 border-2 focus:border-green-500" placeholder="0">
+            <div class="flex gap-2">
+                <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold">BATAL</button>
+                <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold">TAMBAH</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI ---
+        // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA
+        const scriptURL = "https://script.google.com/macros/s/AKfycby_5wpUR444IYzeo-hKkbaZ5YjX53V_UE_Vxfe0o8XhlEJnuKLlIec7lVDYa7E_iKUI7w/exec";
+        
+        let dataToko = null, listProduk = [], keranjang = [], produkDipilih = null, coords = { lat: 0, lng: 0 };
+
+        // --- CORE FUNCTIONS ---
+        function simpanKeranjang() { localStorage.setItem('abu_keranjang', JSON.stringify(keranjang)); }
+        
+        function muatKeranjang() {
+            const saved = localStorage.getItem('abu_keranjang');
+            if (saved) { keranjang = JSON.parse(saved); updateCartUI(); }
+        }
+
+        async function cekAksesToko() {
+            const hp = document.getElementById('input-hp').value;
+            if(!hp) return alert("Masukkan Nomor HP!");
+            const btn = document.getElementById('btn-cek');
+            btn.innerHTML = `<div class="loader mx-auto"></div>`; btn.disabled = true;
+            try {
+                const res = await fetch(`${scriptURL}?action=cekToko&hp=${hp}`);
+                const data = await res.json();
+                if(data.exists) {
+                    dataToko = { hp: hp, ...data };
+                    localStorage.setItem('abu_toko', JSON.stringify(dataToko));
+                    initApp();
+                } else {
+                    document.getElementById('screen-auth').classList.add('hidden');
+                    document.getElementById('screen-daftar').classList.remove('hidden');
+                    ambilLokasi();
+                }
+            } catch (e) { alert("Error koneksi! Periksa URL Script Anda."); }
+            btn.innerHTML = "Cek Akses"; btn.disabled = false;
+        }
+
+        function ambilLokasi() {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                coords.lat = pos.coords.latitude; coords.lng = pos.coords.longitude;
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.lat}&lon=${coords.lng}`);
+                    const json = await res.json();
+                    document.getElementById('reg-kecamatan').value = json.address.subdistrict || json.address.village || "Manual";
+                } catch(e) { aktifkanEditKecamatan(); }
+            }, () => aktifkanEditKecamatan());
+        }
+
+        function aktifkanEditKecamatan() {
+            const inputKec = document.getElementById('reg-kecamatan');
+            inputKec.readOnly = false; 
+            inputKec.placeholder = "Masukkan Kecamatan";
+            inputKec.focus();
+        }
+
+        async function prosesDaftar() {
+            const hp = document.getElementById('input-hp').value;
+            const nama = document.getElementById('reg-nama-toko').value;
+            const pemilik = document.getElementById('reg-pemilik').value;
+            const kec = document.getElementById('reg-kecamatan').value;
+            if(!nama || !pemilik) return alert("Lengkapi data toko!");
+
+            const btn = document.getElementById('btn-daftar');
+            btn.innerText = "MENDAFTAR..."; btn.disabled = true;
+
+            const tokenOS = localStorage.getItem('abu_token_push') || "";
+            const payload = { hp: hp, nama_toko: nama, nama_pemilik: pemilik, kecamatan: kec, lat: coords.lat, lng: coords.lng, sales: "MANDIRI", token_push: tokenOS };
+            
+            try {
+                await fetch(scriptURL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ fungsi: "simpanPelanggan", data: payload }) 
+                });
+                dataToko = payload;
+                localStorage.setItem('abu_toko', JSON.stringify(dataToko));
+                initApp();
+            } catch(e) { alert("Daftar Gagal!"); }
+            btn.innerText = "Daftar & Masuk"; btn.disabled = false;
+        }
+
+        async function initApp() {
+            if(!dataToko) dataToko = JSON.parse(localStorage.getItem('abu_toko'));
+            if(!dataToko) return;
+            
+            document.getElementById('screen-auth').classList.add('hidden');
+            document.getElementById('screen-daftar').classList.add('hidden');
+            document.getElementById('screen-main').classList.remove('hidden');
+            
+            document.getElementById('display-nama-toko').innerText = dataToko.nama_toko;
+            document.getElementById('display-kecamatan').innerText = dataToko.kecamatan || "Lokasi tidak terdeteksi";
+            
+            try {
+                const res = await fetch(`${scriptURL}?action=getInitialData`);
+                const data = await res.json();
+                listProduk = data.produk;
+                renderProduk(listProduk);
+                muatKeranjang();
+                updateTokenKeSheet(); 
+            } catch (e) { console.log("Gagal memuat data produk"); }
+        }
+
+        async function updateTokenKeSheet() {
+            const tokenOS = localStorage.getItem('abu_token_push');
+            if (tokenOS && dataToko && dataToko.hp) {
+                fetch(scriptURL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ 
+                        fungsi: "updateTokenPush", 
+                        hp: dataToko.hp, 
+                        token: tokenOS 
+                    })
+                });
+            }
+        }
+
+        // --- TAB & UI LOGIC ---
+        function showTab(tab) {
+            const isKatalog = (tab === 'katalog');
+            document.getElementById('content-katalog').classList.toggle('hidden', !isKatalog);
+            document.getElementById('content-riwayat').classList.toggle('hidden', isKatalog);
+            document.getElementById('tab-katalog').className = isKatalog ? "text-[10px] bg-white text-green-900 px-3 py-1.5 rounded-full font-bold uppercase" : "text-[10px] border border-white text-white px-3 py-1.5 rounded-full font-bold uppercase";
+            document.getElementById('tab-riwayat').className = !isKatalog ? "text-[10px] bg-white text-green-900 px-3 py-1.5 rounded-full font-bold uppercase" : "text-[10px] border border-white text-white px-3 py-1.5 rounded-full font-bold uppercase";
+            if(!isKatalog) muatRiwayatServer();
+        }
+
+        async function muatRiwayatServer() {
+            const container = document.getElementById('container-riwayat');
+            container.innerHTML = `<div class="loader mx-auto mt-10"></div>`;
+            try {
+                const res = await fetch(`${scriptURL}?action=getRiwayat&hp=${dataToko.hp}`);
+                const data = await res.json();
+                if(!data || data.length === 0) { container.innerHTML = "<p class='text-center py-10 text-gray-400'>Belum ada pesanan.</p>"; return; }
+                container.innerHTML = data.map(order => `
+                    <div class="history-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] bg-gray-100 px-2 py-1 rounded font-bold text-gray-500">${order.tanggal}</span>
+                            <span class="text-[10px] font-black text-green-700 uppercase">${order.status}</span>
+                        </div>
+                        <p class="text-sm font-bold text-gray-700">${order.items_ringkas}</p>
+                    </div>
+                `).join('');
+            } catch (e) { container.innerHTML = "Gagal memuat."; }
+        }
+
+        function logicCari(q) {
+            const hasil = listProduk.filter(p => p[1].toLowerCase().includes(q.toLowerCase()));
+            renderProduk(hasil);
+        }
+
+        function renderProduk(data) {
+            const container = document.getElementById('container-produk');
+            container.innerHTML = data.map((p) => {
+                const idxAsli = listProduk.findIndex(x => x[1] === p[1]);
+                return `<div onclick="pilihProduk(${idxAsli})" class="bg-white p-3 rounded-3xl shadow-sm border">
+                    <img src="${p[4]}" class="w-full h-24 object-cover rounded-2xl mb-2 bg-gray-50">
+                    <h4 class="font-bold text-[11px] uppercase h-8 overflow-hidden">${p[1]}</h4>
+                    <p class="text-sm font-black text-green-700">Rp ${Number(p[7]).toLocaleString()}</p>
+                </div>`;
+            }).join('');
+        }
+
+        function pilihProduk(idx) {
+            produkDipilih = listProduk[idx];
+            document.getElementById('qty-nama-produk').innerText = produkDipilih[1];
+            document.getElementById('input-qty').value = "";
+            document.getElementById('modal-qty').classList.add('active');
+        }
+
+        function tutupQty() { document.getElementById('modal-qty').classList.remove('active'); }
+
+        function tambahkanKeKeranjang() {
+            const qty = document.getElementById('input-qty').value;
+            if(!qty || qty <= 0) return;
+            keranjang.push({ nama_produk: produkDipilih[1], qty_pesan: qty, harga: produkDipilih[7] });
+            updateCartUI(); simpanKeranjang(); tutupQty();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = keranjang.length;
+            let total = 0;
+            document.getElementById('list-keranjang').innerHTML = keranjang.map((item, i) => {
+                total += (item.qty_pesan * item.harga);
+                return `<div class="flex justify-between items-center bg-gray-50 p-3 rounded-2xl">
+                    <div class="flex-1 font-bold text-xs">${item.nama_produk}</div>
+                    <div class="flex items-center gap-2">
+                        <input type="number" onchange="keranjang[${i}].qty_pesan=this.value;updateCartUI();simpanKeranjang()" value="${item.qty_pesan}" class="w-10 p-1 rounded border text-center text-xs font-bold">
+                        <button onclick="keranjang.splice(${i},1);updateCartUI();simpanKeranjang()" class="text-red-500"><i class="fa fa-trash"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+            document.getElementById('total-harga').innerText = "Rp " + total.toLocaleString();
+        }
+
+        function toggleKeranjang() { document.getElementById('modal-keranjang').classList.toggle('active'); }
+
+        async function kirimOrder() {
+            if(keranjang.length === 0) return;
+            const btn = document.getElementById('btn-kirim');
+            btn.innerText = "MENGIRIM..."; btn.disabled = true;
+            try {
+                await fetch(scriptURL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        fungsi: "prosesPesanan", 
+                        data: { hp_toko: dataToko.hp, items: keranjang, nama_sales: "APP-TOKO" }
+                    }) 
+                });
+                alert("Order Berhasil Terkirim!");
+                keranjang = []; localStorage.removeItem('abu_keranjang');
+                updateCartUI(); toggleKeranjang();
+            } catch(e) { alert("Gagal mengirim pesanan!"); }
+            btn.innerText = "Proses Order"; btn.disabled = false;
+        }
+
+        // --- JALANKAN APLIKASI SAAT HALAMAN SIAP ---
+        window.addEventListener('load', () => {
+            const savedToko = localStorage.getItem('abu_toko');
+            if (savedToko) {
+                dataToko = JSON.parse(savedToko);
+                initApp();
+            }
+        });
+    </script>
+</body>
+</html>
