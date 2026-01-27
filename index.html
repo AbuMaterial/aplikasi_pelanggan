@@ -12,32 +12,28 @@
       window.OneSignalDeferred = window.OneSignalDeferred || [];
 OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
-        appId: "af8c6a27-df94-4a65-82f0-3005dc5cf3c7", // Pastikan ID ini Benar
+        appId: "af8c6a27-df94-4a65-82f0-3005dc5cf3c7",
         safari_web_id: "",
-        notifyButton: { 
-            enable: true,
-            displayPredicate: () => OneSignal.Notifications.permission !== "granted" 
-        },
+        allowLocalhostAsSecureOrigin: true, // Tambahkan ini untuk testing
+        notifyButton: { enable: false }, // Matikan tombol lonceng bawaan agar tidak mengganggu
     });
 
-    // PAKSA MUNCULKAN PROMPT IZIN
+    // Gunakan fungsi bawaan OneSignal untuk memicu Slide Prompt
+    // Ini lebih ampuh daripada requestPermission langsung
     if (OneSignal.Notifications.permission !== "granted") {
-        await OneSignal.Notifications.requestPermission();
+        OneSignal.Notifications.showPrompt(); 
     }
 
     const saveId = () => {
         const userId = OneSignal.User.PushSubscription.id;
         if (userId) {
             localStorage.setItem('abu_token_push', userId);
-            console.log("Token tersimpan:", userId);
+            console.log("Token ditemukan:", userId);
             if (typeof dataToko !== 'undefined' && dataToko) updateTokenKeSheet();
         }
     };
 
-    // Jalankan setiap ada perubahan status langganan
     OneSignal.User.PushSubscription.addEventListener("change", saveId);
-    
-    // Cek ID secara berkala jika belum ada
     saveId();
 });
     </script>
