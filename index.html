@@ -10,23 +10,36 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js" defer></script>
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "af8c6a27-df94-4a65-82f0-3005dc5cf3c7", 
-          safari_web_id: "",
-          notifyButton: { enable: true },
-        });
+OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+        appId: "MASUKKAN_APP_ID_ONESIGNAL_ANDA", // Pastikan ID ini Benar
+        safari_web_id: "",
+        notifyButton: { 
+            enable: true,
+            displayPredicate: () => OneSignal.Notifications.permission !== "granted" 
+        },
+    });
 
-        OneSignal.User.PushSubscription.addEventListener("change", (event) => {
-            if (event.current.id) {
-                localStorage.setItem('abu_token_push', event.current.id);
-                if (typeof dataToko !== 'undefined' && dataToko) updateTokenKeSheet();
-            }
-        });
-        
+    // PAKSA MUNCULKAN PROMPT IZIN
+    if (OneSignal.Notifications.permission !== "granted") {
+        await OneSignal.Notifications.requestPermission();
+    }
+
+    const saveId = () => {
         const userId = OneSignal.User.PushSubscription.id;
-        if (userId) localStorage.setItem('abu_token_push', userId);
-      });
+        if (userId) {
+            localStorage.setItem('abu_token_push', userId);
+            console.log("Token tersimpan:", userId);
+            if (typeof dataToko !== 'undefined' && dataToko) updateTokenKeSheet();
+        }
+    };
+
+    // Jalankan setiap ada perubahan status langganan
+    OneSignal.User.PushSubscription.addEventListener("change", saveId);
+    
+    // Cek ID secara berkala jika belum ada
+    saveId();
+});
     </script>
 
     <script>
