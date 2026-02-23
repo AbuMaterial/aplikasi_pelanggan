@@ -46,6 +46,28 @@
             100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
         .btn-order-pulse { animation: btn-pulse 1.5s infinite; background-color: #22c55e !important; }
+/* CSS SLIDER GAMBAR */
+        .img-slider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; border-radius: 1.5rem; }
+        .img-slider img { flex: 0 0 100%; scroll-snap-align: start; object-fit: contain; background: #f9f9f9; max-height: 250px; }
+        .img-slider::-webkit-scrollbar { display: none; } /* Sembunyikan scrollbar */
+/* Container slider agar relatif untuk posisi titik */
+.slider-container { position: relative; }
+
+/* Gaya titik-titik (dots) */
+.slider-dots {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: -20px; /* Naik ke atas gambar sedikit */
+    margin-bottom: 15px;
+    z-index: 10;
+    position: relative;
+}
+.dot { width: 8px; height: 8px; background: #ddd; border-radius: 50%; transition: 0.3s; }
+.dot.active { background: #075E54; width: 20px; border-radius: 10px; }
+
+/* Animasi halus saat scroll */
+.img-slider { scroll-behavior: smooth; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -164,12 +186,18 @@
     </div>
 
     <div id="modal-qty" class="modal">
-        <div class="bg-white rounded-[2rem] p-8 w-80 text-center">
-            <h3 id="qty-nama-produk" class="font-bold mb-4 h-10 overflow-hidden text-sm uppercase"></h3>
+        <div class="bg-white rounded-[2rem] p-6 w-80 text-center shadow-2xl">
+            <div id="qty-slider" class="img-slider mb-4"></div>
+            
+            <h3 id="qty-nama-produk" class="font-bold mb-1 text-sm uppercase"></h3>
+            
+            <p id="qty-harga-display" class="text-green-700 font-black text-lg mb-4"></p>
+            
             <input type="number" id="input-qty" class="w-full p-4 bg-gray-100 rounded-xl text-center text-2xl font-bold mb-4 border-2 focus:border-green-500" placeholder="0">
+            
             <div class="flex gap-2">
-                <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold">BATAL</button>
-                <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold">TAMBAH</button>
+                <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold uppercase text-xs">Batal</button>
+                <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold uppercase text-xs">Tambah</button>
             </div>
         </div>
     </div>
@@ -267,23 +295,37 @@
         }
 
         async function initApp() {
-            if(!dataToko) dataToko = JSON.parse(localStorage.getItem('abu_toko'));
-            if(!dataToko) return;
-            document.getElementById('screen-auth').classList.add('hidden');
-            document.getElementById('screen-daftar').classList.add('hidden');
-            document.getElementById('screen-main').classList.remove('hidden');
-            document.getElementById('btn-manual-sticky').classList.remove('hidden');
-            document.getElementById('display-nama-toko').innerText = dataToko.nama_toko;
-            document.getElementById('display-kecamatan').innerText = dataToko.kecamatan || "Lokasi Toko";
-            try {
-                const res = await fetch(`${scriptURL}?action=getInitialData`);
-                const data = await res.json();
-                listProduk = data.produk;
-                renderProduk(listProduk);
-                muatKeranjang();
-                updateTokenKeSheet(); 
-            } catch (e) { console.log("Gagal muat produk"); }
-        }
+    if(!dataToko) dataToko = JSON.parse(localStorage.getItem('abu_toko'));
+    if(!dataToko) return;
+
+    // Menampilkan layar utama
+    document.getElementById('screen-auth').classList.add('hidden');
+    document.getElementById('screen-daftar').classList.add('hidden');
+    document.getElementById('screen-main').classList.remove('hidden');
+    document.getElementById('btn-manual-sticky').classList.remove('hidden');
+    
+    document.getElementById('display-nama-toko').innerText = dataToko.nama_toko;
+    document.getElementById('display-kecamatan').innerText = dataToko.kecamatan || "Lokasi Toko";
+
+    // Loader saat muat data
+    document.getElementById('container-produk').innerHTML = '<div class="col-span-2 text-center py-10"><div class="loader mx-auto"></div><p class="text-xs mt-2 font-bold text-gray-400">MEMUAT KATALOG...</p></div>';
+
+    try {
+        const res = await fetch(`${scriptURL}?action=getInitialData`);
+        const data = await res.json();
+        
+        // Urutkan Abjad
+        listProduk = data.produk.sort((a, b) => {
+            return a[1].localeCompare(b[1], undefined, {sensitivity: 'base'});
+        });
+        
+        renderProduk(listProduk);
+        muatKeranjang();
+        updateTokenKeSheet(); 
+    } catch (e) { 
+        document.getElementById('container-produk').innerHTML = '<p class="col-span-2 text-center text-red-500">Gagal memuat produk. Periksa koneksi.</p>';
+    }
+}
 
         async function updateTokenKeSheet() {
             const tokenOS = localStorage.getItem('abu_token_push');
@@ -314,29 +356,45 @@
         }
 
         function logicCari(q) {
-            const hasil = listProduk.filter(p => p[1].toLowerCase().includes(q.toLowerCase()));
-            renderProduk(hasil);
-            const areaKosong = document.getElementById('hasil-kosong');
-            const containerProd = document.getElementById('container-produk');
-            const btnSticky = document.getElementById('btn-manual-sticky');
-            if(q.length > 0 && hasil.length === 0) {
-                areaKosong.classList.remove('hidden');
-                containerProd.classList.add('hidden');
-                btnSticky.classList.add('hidden');
-            } else {
-                areaKosong.classList.add('hidden');
-                containerProd.classList.remove('hidden');
-                if(!document.getElementById('content-katalog').classList.contains('hidden')) btnSticky.classList.remove('hidden');
-            }
-        }
+    // Filter dari listProduk yang sudah urut abjad
+    const hasil = listProduk.filter(p => p[1].toLowerCase().includes(q.toLowerCase()));
+    
+    renderProduk(hasil);
+    
+    // ... (logika menampilkan tombol manual tetap sama) ...
+    const areaKosong = document.getElementById('hasil-kosong');
+    const containerProd = document.getElementById('container-produk');
+    const btnSticky = document.getElementById('btn-manual-sticky');
+    
+    if(q.length > 0 && hasil.length === 0) {
+        areaKosong.classList.remove('hidden');
+        containerProd.classList.add('hidden');
+        btnSticky.classList.add('hidden');
+    } else {
+        areaKosong.classList.add('hidden');
+        containerProd.classList.remove('hidden');
+        if(!document.getElementById('content-katalog').classList.contains('hidden')) btnSticky.classList.remove('hidden');
+    }
+}
 
         function renderProduk(data) {
-            const container = document.getElementById('container-produk');
-            container.innerHTML = data.map((p) => {
-                const idxAsli = listProduk.findIndex(x => x[1] === p[1]);
-                return `<div onclick="pilihProduk(${idxAsli})" class="bg-white p-3 rounded-3xl shadow-sm border active:scale-95 transition-transform"><img src="${p[4]}" class="w-full h-24 object-cover rounded-2xl mb-2 bg-gray-50"><h4 class="font-bold text-[10px] uppercase h-8 overflow-hidden leading-tight">${p[1]}</h4><p class="text-sm font-black text-green-700">Rp ${Number(p[7]).toLocaleString()}</p></div>`;
-            }).join('');
-        }
+    const container = document.getElementById('container-produk');
+    container.innerHTML = data.map((p) => {
+        const idxAsli = listProduk.findIndex(x => x[1] === p[1]);
+        
+        // AMBIL GAMBAR PERTAMA SAJA UNTUK DAFTAR UTAMA
+        const linkGambar = p[4] || "";
+        const gambarPertama = linkGambar.split(',')[0].trim();
+        const srcGambar = gambarPertama ? gambarPertama : 'https://placehold.co/400x400?text=No+Image';
+
+        return `
+            <div onclick="pilihProduk(${idxAsli})" class="bg-white p-3 rounded-3xl shadow-sm border active:scale-95 transition-transform">
+                <img src="${srcGambar}" class="w-full h-24 object-cover rounded-2xl mb-2 bg-gray-50">
+                <h4 class="font-bold text-[10px] uppercase h-8 overflow-hidden leading-tight">${p[1]}</h4>
+                <p class="text-sm font-black text-green-700">Rp ${Number(p[7]).toLocaleString()}</p>
+            </div>`;
+    }).join('');
+}
 
         function bukaModalManual() { document.getElementById('modal-manual').classList.add('active'); }
         function tutupModalManual() { document.getElementById('modal-manual').classList.remove('active'); }
@@ -366,12 +424,55 @@
         }
 
         function pilihProduk(idx) {
-            produkDipilih = listProduk[idx];
-            document.getElementById('qty-nama-produk').innerText = produkDipilih[1];
-            document.getElementById('input-qty').value = "";
-            document.getElementById('modal-qty').classList.add('active');
-            setTimeout(() => document.getElementById('input-qty').focus(), 300);
-        }
+    produkDipilih = listProduk[idx];
+    document.getElementById('qty-nama-produk').innerText = produkDipilih[1];
+    
+    const slider = document.getElementById('qty-slider');
+    const linkGambar = produkDipilih[4] || "";
+    // Membersihkan link gambar dan memisahkannya
+    const daftarGambar = linkGambar.split(',').map(s => s.trim()).filter(s => s !== "");
+    
+    if (daftarGambar.length === 0) {
+        slider.innerHTML = `<img src="https://placehold.co/400x400?text=No+Image">`;
+    } else {
+        slider.innerHTML = daftarGambar.map(url => 
+            `<img src="${url}" onerror="this.src='https://placehold.co/400x400?text=Error+Image'">`
+        ).join('');
+    }
+
+    // Indikator Titik (Dots)
+    const existingDots = document.querySelector('.slider-dots');
+    if (existingDots) existingDots.remove();
+
+    if (daftarGambar.length > 1) {
+        let dotsHtml = '<div class="slider-dots">';
+        dotsHtml += daftarGambar.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}"></div>`).join('');
+        dotsHtml += '</div>';
+        slider.insertAdjacentHTML('afterend', dotsHtml);
+
+        // Update dot saat scroll
+        slider.onscroll = () => {
+            const width = slider.clientWidth;
+            const index = Math.round(slider.scrollLeft / width);
+            const dots = document.querySelectorAll('.dot');
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        };
+    }
+
+    const harga = Number(produkDipilih[7]).toLocaleString();
+    const satuan = produkDipilih[3] || "pcs";
+    document.getElementById('qty-harga-display').innerText = `Rp ${harga} / ${satuan}`;
+
+    document.getElementById('input-qty').value = "";
+    document.getElementById('modal-qty').classList.add('active');
+    
+    // Auto focus ke input jumlah
+    setTimeout(() => {
+        const inputQty = document.getElementById('input-qty');
+        inputQty.focus();
+        inputQty.click(); // Penting untuk mobile agar keyboard muncul
+    }, 400);
+}
         function tutupQty() { document.getElementById('modal-qty').classList.remove('active'); }
         function tambahkanKeKeranjang() {
             const qty = document.getElementById('input-qty').value;
