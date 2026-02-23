@@ -186,21 +186,27 @@
     </div>
 
     <div id="modal-qty" class="modal">
-        <div class="bg-white rounded-[2rem] p-6 w-80 text-center shadow-2xl">
-            <div id="qty-slider" class="img-slider mb-4"></div>
-            
-            <h3 id="qty-nama-produk" class="font-bold mb-1 text-sm uppercase"></h3>
-            
-            <p id="qty-harga-display" class="text-green-700 font-black text-lg mb-4"></p>
-            
-            <input type="number" id="input-qty" class="w-full p-4 bg-gray-100 rounded-xl text-center text-2xl font-bold mb-4 border-2 focus:border-green-500" placeholder="0">
-            
-            <div class="flex gap-2">
-                <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold uppercase text-xs">Batal</button>
-                <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold uppercase text-xs">Tambah</button>
-            </div>
+    <div class="bg-white rounded-[2rem] p-6 w-80 text-center shadow-2xl relative">
+        
+        <button onclick="bagikanKeWA()" class="absolute top-5 right-5 text-gray-400 hover:text-green-600 flex flex-col items-center transition-all active:scale-90">
+            <i class="fa fa-share-nodes text-lg"></i>
+            <span class="text-[8px] font-bold uppercase tracking-tighter">Bagikan</span>
+        </button>
+
+        <div id="qty-slider" class="img-slider mb-4"></div>
+        
+        <h3 id="qty-nama-produk" class="font-bold mb-1 text-sm uppercase"></h3>
+        
+        <p id="qty-harga-display" class="text-green-700 font-black text-lg mb-4"></p>
+        
+        <input type="number" id="input-qty" inputmode="numeric" class="w-full p-4 bg-gray-100 rounded-xl text-center text-2xl font-bold mb-4 border-2 focus:border-green-500" placeholder="0">
+        
+        <div class="flex gap-2">
+            <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold uppercase text-xs">Batal</button>
+            <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold uppercase text-xs">Tambah</button>
         </div>
     </div>
+</div>
 
     <script>
         const scriptURL = "https://script.google.com/macros/s/AKfycby_5wpUR444IYzeo-hKkbaZ5YjX53V_UE_Vxfe0o8XhlEJnuKLlIec7lVDYa7E_iKUI7w/exec";
@@ -529,6 +535,29 @@
             const savedToko = localStorage.getItem('abu_toko');
             if (savedToko) { dataToko = JSON.parse(savedToko); initApp(); }
         });
+
+function bagikanKeWA() {
+    if (!produkDipilih) return;
+
+    const nama = produkDipilih[1]; // Nama Produk
+    const harga = Number(produkDipilih[7]).toLocaleString(); // Harga Jual
+    const satuan = produkDipilih[3] || "pcs";
+    const linkGambar = (produkDipilih[4] || "").split(',')[0].trim(); // Ambil gambar pertama saja
+    
+    // GANTI LINK DI BAWAH INI dengan link WebApp/Website Anda yang sebenarnya
+    const urlApp = window.location.href; 
+
+    // Susun Pesan WhatsApp
+    let pesan = `*${nama}*\n`;
+    pesan += `Harga: Rp ${harga} / ${satuan}\n\n`;
+    if(linkGambar) pesan += `Gambar Produk:\n${linkGambar}\n\n`;
+    pesan += `Mau pesan barang ini atau lihat produk lainnya? Klik link toko kami di sini:\n${urlApp}\n\n`;
+    pesan += `_Belanja kebutuhan material praktis di Abu Material_`;
+
+    const linkWA = `https://api.whatsapp.com/send?text=${encodeURIComponent(pesan)}`;
+    window.open(linkWA, '_blank');
+}
+
     </script>
 </body>
 </html>
