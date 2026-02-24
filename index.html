@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -191,18 +190,22 @@
     <div id="modal-qty" class="modal">
     <div class="bg-white rounded-[2rem] p-6 w-80 text-center shadow-2xl relative overflow-hidden">
         
-        <p class="text-[8px] text-gray-400 mb-2 uppercase font-bold tracking-widest italic">
-            <i class="fa fa-hand-pointer"></i> Tekan lama pada gambar untuk bagikan
+        <p class="text-[10px] text-gray-400 mb-2 uppercase font-extrabold tracking-widest">
+            Detail Produk
         </p>
 
         <div class="relative mb-4">
             <div id="qty-slider" class="img-slider"></div>
-            <div id="capture-area" class="absolute inset-0 z-[50] opacity-0 pointer-events-none"></div>
+            <div id="capture-area" class="absolute inset-0 z-[10] opacity-0 pointer-events-none"></div>
         </div>
         
         <h3 id="qty-nama-produk" class="font-bold mb-1 text-sm uppercase"></h3>
         <p id="qty-harga-display" class="text-green-700 font-black text-lg mb-4"></p>
         
+        <button onclick="bagikanProdukLengkap(event)" class="w-full mb-4 py-3 bg-orange-500 text-white rounded-xl font-bold uppercase text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
+    <i class="fa fa-share-alt"></i> Bagikan Gambar & Link
+</button>
+
         <input type="number" id="input-qty" inputmode="numeric" class="w-full p-4 bg-gray-100 rounded-xl text-center text-2xl font-bold mb-4 border-2 focus:border-green-500" placeholder="0">
         
         <div class="flex gap-2">
@@ -487,42 +490,70 @@ function pilihProduk(idx) {
         inputQty.focus();
     }, 400);
 
-    // Jalankan pengambilan screenshot setelah modal & gambar stabil
-    setTimeout(generateKartuProduk, 1000);
+   
 }
 
 // --- FUNGSI GENERATE SCREENSHOT ---
-function generateKartuProduk() {
-    const areaModal = document.querySelector("#modal-qty .bg-white");
-    const captureArea = document.getElementById('capture-area');
+async function bagikanProdukLengkap(event) {
+    if (!produkDipilih) return;
     
-    if (!areaModal || !captureArea) return;
-    if (typeof html2canvas === 'undefined') return;
+    // Pastikan event ada untuk animasi tombol
+    const btn = event ? event.currentTarget : null;
+    let teksAsli = "";
+    if (btn) {
+        teksAsli = btn.innerHTML;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Menyiapkan...';
+        btn.disabled = true;
+    }
 
-    // Sembunyikan tombol & input sementara agar screenshot bersih seperti brosur
-    const elemenSembunyi = areaModal.querySelectorAll('button, input, .slider-dots, p.italic');
-    elemenSembunyi.forEach(el => el.style.visibility = "hidden");
+    try {
+        const areaModal = document.querySelector("#modal-qty .bg-white");
+        
+        // Sembunyikan elemen agar gambar bersih
+        const elemenSembunyi = areaModal.querySelectorAll('button, input, .slider-dots, p.italic');
+        elemenSembunyi.forEach(el => el.style.visibility = "hidden");
 
-    html2canvas(areaModal, { 
-        useCORS: true,
-        scale: 2,
-        backgroundColor: "#ffffff"
-    }).then(canvas => {
-        const imageBase64 = canvas.toDataURL("image/png");
+        // 1. Ambil Screenshot
+        const canvas = await html2canvas(areaModal, { 
+            useCORS: true, 
+            scale: 2,
+            backgroundColor: "#ffffff" 
+        });
         
-        // Masukkan hasil screenshot ke captureArea
-        captureArea.innerHTML = `<img src="${imageBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:1.5rem;">`;
-        
-        // Aktifkan interaksi klik/tekan hanya pada area gambar
-        captureArea.style.pointerEvents = "auto";
-        captureArea.style.cursor = "pointer";
-        
-        // Munculkan kembali tombol asli agar bisa diklik normal
+        const dataUrl = canvas.toDataURL("image/png");
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], `produk-${Date.now()}.png`, { type: 'image/png' });
+
+        // Munculkan kembali elemen di layar
         elemenSembunyi.forEach(el => el.style.visibility = "visible");
-    }).catch(err => console.log("Gagal membuat kartu produk:", err));
-}
 
-    
+        // 2. Susun Teks & Link
+        const urlApp = window.location.href;
+        const pesanTeks = `Untuk memesan produk ini dan melihat produk lain silahkan kunjungi aplikasi kami di link berikut:\n🔗 ${urlApp}`;
+
+        // 3. TRIK: Salin teks ke Clipboard otomatis (sebagai cadangan jika caption kosong)
+        try {
+            await navigator.clipboard.writeText(pesanTeks);
+        } catch (err) { console.log("Gagal salin otomatis"); }
+
+        // 4. Proses Berbagi
+        if (navigator.share) {
+            await navigator.share({
+                files: [file],
+                text: pesanTeks // Tetap masukkan text sebagai caption utama
+            });
+        } else {
+            alert("Gunakan Chrome/Safari di HP.");
+        }
+    } catch (err) {
+        console.error("Gagal share:", err);
+    } finally {
+        if (btn) {
+            btn.innerHTML = teksAsli;
+            btn.disabled = false;
+        }
+    }
+}
         function tutupQty() { document.getElementById('modal-qty').classList.remove('active'); }
         function tambahkanKeKeranjang() {
             const qty = document.getElementById('input-qty').value;
@@ -588,23 +619,23 @@ function bagikanKeWA() {
     const satuan = produkDipilih[3] || "pcs";
     const rawImg = (produkDipilih[4] || "").split(',')[0].trim();
     
-    // Proxy untuk gambar agar muncul preview di WA
+    // STRATEGI: Menggunakan Proxy agar WA mengenali ini sebagai file JPG
+    // Ini mengubah link Shopee/Webp menjadi link yang diakhiri .jpg
     const linkGambarFix = rawImg ? `https://images.weserv.nl/?url=${encodeURIComponent(rawImg)}&output=jpg&t=${new Date().getTime()}` : "";
     
     const urlApp = window.location.href; 
 
-    // SUSUNAN PESAN
+    // SUSUNAN PESAN (Link Gambar harus di PALING ATAS tanpa teks di depannya)
+    // Tujuannya agar algoritma WhatsApp memprioritaskan link ini untuk dijadikan preview gambar
     let pesan = `${linkGambarFix}\n\n`; 
     pesan += `*${nama}*\n`;
     pesan += `💰 Harga: *Rp ${harga}* / ${satuan}\n\n`;
-    
-    // Teks petunjuk pesanan yang Anda minta
-    pesan += `Untuk memesan produk ini dan melihat produk lain silahkan kunjungi aplikasi kami di link berikut:\n`;
-    pesan += `🔗 ${urlApp}\n\n`;
-    
+    pesan += `Mau pesan atau lihat produk lainnya? Klik link toko kami:\n🔗 ${urlApp}\n\n`;
     pesan += `_Belanja kebutuhan material praktis di Abu Material_`;
 
     const linkWA = `https://api.whatsapp.com/send?text=${encodeURIComponent(pesan)}`;
+    
+    // Buka WhatsApp
     window.open(linkWA, '_blank');
 }
 
