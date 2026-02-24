@@ -119,25 +119,25 @@
         </nav>
 
         <div id="content-katalog">
-            //<div id="reminder-keranjang" class="hidden bg-orange-500 text-white text-[10px] font-bold text-center py-2 uppercase tracking-widest sticky top-[154px] z-30">
-                <i class="fa fa-info-circle"></i> Ada pesanan di keranjang yang belum dikirim!
-            </div>// nonaktifkan
-            
+    <div id="reminder-keranjang" class="hidden bg-orange-500 text-white text-[10px] font-bold text-center py-2 uppercase tracking-widest sticky top-[88px] z-[41] shadow-md">
+        <i class="fa fa-info-circle"></i> Buka Keranjang!!! Ada pesanan yang belum diproses!
+    </div>
 
-            <div class="p-4 bg-white shadow-sm sticky top-[88px] z-40">
-                <div class="relative">
-                    <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" id="input-cari" oninput="logicCari(this.value)" placeholder="Cari produk..." class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl outline-none border-2 focus:border-green-600 font-medium">
-                </div>
-                <div id="hasil-kosong" class="hidden mt-3">
-                    <button onclick="bukaModalManual()" class="btn-manual-blink w-full py-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg">
-                        <i class="fa fa-exclamation-circle text-lg"></i>
-                        <span>Produk tidak ada? Klik Order Manual di Sini</span>
-                    </button>
-                </div>
-            </div>
-            <div class="p-4 grid grid-cols-2 gap-4" id="container-produk"></div>
+    <div class="p-4 bg-white shadow-sm sticky top-[88px] z-40">
+        <div class="relative">
+            <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="input-cari" oninput="logicCari(this.value)" placeholder="Cari produk..." class="w-full pl-12 pr-4 py-3 bg-gray-100 rounded-2xl outline-none border-2 focus:border-green-600 font-medium">
         </div>
+        <div id="hasil-kosong" class="hidden mt-3">
+            <button onclick="bukaModalManual()" class="btn-manual-blink w-full py-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 shadow-lg">
+                <i class="fa fa-exclamation-circle text-lg"></i>
+                <span>Produk tidak ada? Klik Order Manual di Sini</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="p-4 grid grid-cols-2 gap-4" id="container-produk"></div>
+</div>
 
         <div id="content-riwayat" class="hidden p-4">
             <h3 class="font-black text-lg mb-4 uppercase">Riwayat Pesanan</h3>
