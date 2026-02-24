@@ -194,10 +194,12 @@
             <i class="fa fa-hand-pointer"></i> Tekan lama pada gambar untuk bagikan
         </p>
 
-        <div id="qty-slider" class="img-slider mb-4"></div>
+        <div class="relative mb-4">
+            <div id="qty-slider" class="img-slider"></div>
+            <div id="capture-area" class="absolute inset-0 z-[50] opacity-0 pointer-events-none"></div>
+        </div>
         
         <h3 id="qty-nama-produk" class="font-bold mb-1 text-sm uppercase"></h3>
-        
         <p id="qty-harga-display" class="text-green-700 font-black text-lg mb-4"></p>
         
         <input type="number" id="input-qty" inputmode="numeric" class="w-full p-4 bg-gray-100 rounded-xl text-center text-2xl font-bold mb-4 border-2 focus:border-green-500" placeholder="0">
@@ -206,8 +208,6 @@
             <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold uppercase text-xs">Batal</button>
             <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold uppercase text-xs">Tambah</button>
         </div>
-
-        <div id="capture-area" class="absolute inset-0 z-[100] opacity-0 pointer-events-none"></div>
     </div>
 </div>
 
@@ -498,7 +498,7 @@ function generateKartuProduk() {
     if (!areaModal || !captureArea) return;
     if (typeof html2canvas === 'undefined') return;
 
-    // Sembunyikan elemen yang tidak ingin difoto
+    // Sembunyikan tombol & input sementara agar screenshot bersih seperti brosur
     const elemenSembunyi = areaModal.querySelectorAll('button, input, .slider-dots, p.italic');
     elemenSembunyi.forEach(el => el.style.visibility = "hidden");
 
@@ -508,12 +508,17 @@ function generateKartuProduk() {
         backgroundColor: "#ffffff"
     }).then(canvas => {
         const imageBase64 = canvas.toDataURL("image/png");
-        captureArea.innerHTML = `<img src="${imageBase64}" style="width:100%; height:100%; object-fit:contain;">`;
-        captureArea.classList.remove('pointer-events-none');
         
-        // Munculkan kembali elemen asli
+        // Masukkan hasil screenshot ke captureArea
+        captureArea.innerHTML = `<img src="${imageBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:1.5rem;">`;
+        
+        // Aktifkan interaksi klik/tekan hanya pada area gambar
+        captureArea.style.pointerEvents = "auto";
+        captureArea.style.cursor = "pointer";
+        
+        // Munculkan kembali tombol asli agar bisa diklik normal
         elemenSembunyi.forEach(el => el.style.visibility = "visible");
-    }).catch(err => console.log("Gagal buat gambar:", err));
+    }).catch(err => console.log("Gagal membuat kartu produk:", err));
 }
 
     
