@@ -540,22 +540,28 @@
 function bagikanKeWA() {
     if (!produkDipilih) return;
 
-    const nama = produkDipilih[1]; // Nama Produk
-    const harga = Number(produkDipilih[7]).toLocaleString(); // Harga Jual
+    const nama = produkDipilih[1];
+    const harga = Number(produkDipilih[7]).toLocaleString();
     const satuan = produkDipilih[3] || "pcs";
-    const linkGambar = (produkDipilih[4] || "").split(',')[0].trim(); // Ambil gambar pertama saja
+    const rawImg = (produkDipilih[4] || "").split(',')[0].trim();
     
-    // GANTI LINK DI BAWAH INI dengan link WebApp/Website Anda yang sebenarnya
+    // STRATEGI: Menggunakan Proxy agar WA mengenali ini sebagai file JPG
+    // Ini mengubah link Shopee/Webp menjadi link yang diakhiri .jpg
+    const linkGambarFix = rawImg ? `https://images.weserv.nl/?url=${encodeURIComponent(rawImg)}&output=jpg&t=${new Date().getTime()}` : "";
+    
     const urlApp = window.location.href; 
 
-    // Susun Pesan WhatsApp
-    let pesan = `*${nama}*\n`;
-    pesan += `Harga: Rp ${harga} / ${satuan}\n\n`;
-    if(linkGambar) pesan += `Gambar Produk:\n${linkGambar}\n\n`;
-    pesan += `Mau pesan barang ini atau lihat produk lainnya? Klik link toko kami di sini:\n${urlApp}\n\n`;
+    // SUSUNAN PESAN (Link Gambar harus di PALING ATAS tanpa teks di depannya)
+    // Tujuannya agar algoritma WhatsApp memprioritaskan link ini untuk dijadikan preview gambar
+    let pesan = `${linkGambarFix}\n\n`; 
+    pesan += `*${nama}*\n`;
+    pesan += `💰 Harga: *Rp ${harga}* / ${satuan}\n\n`;
+    pesan += `Mau pesan atau lihat produk lainnya? Klik link toko kami:\n🔗 ${urlApp}\n\n`;
     pesan += `_Belanja kebutuhan material praktis di Abu Material_`;
 
     const linkWA = `https://api.whatsapp.com/send?text=${encodeURIComponent(pesan)}`;
+    
+    // Buka WhatsApp
     window.open(linkWA, '_blank');
 }
 
