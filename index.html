@@ -14,6 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         .wa-green { background-color: #075E54; }
@@ -187,12 +188,11 @@
     </div>
 
     <div id="modal-qty" class="modal">
-    <div class="bg-white rounded-[2rem] p-6 w-80 text-center shadow-2xl relative">
+    <div class="bg-white rounded-[2rem] p-6 w-80 text-center shadow-2xl relative overflow-hidden">
         
-        <button onclick="bagikanKeWA()" class="absolute top-5 right-5 text-gray-400 hover:text-green-600 flex flex-col items-center transition-all active:scale-90">
-            <i class="fa fa-share-nodes text-lg"></i>
-            <span class="text-[8px] font-bold uppercase tracking-tighter">Bagikan</span>
-        </button>
+        <p class="text-[8px] text-gray-400 mb-2 uppercase font-bold tracking-widest italic">
+            <i class="fa fa-hand-pointer"></i> Tekan lama pada gambar untuk bagikan
+        </p>
 
         <div id="qty-slider" class="img-slider mb-4"></div>
         
@@ -206,6 +206,8 @@
             <button onclick="tutupQty()" class="flex-1 py-3 bg-gray-200 rounded-xl font-bold uppercase text-xs">Batal</button>
             <button onclick="tambahkanKeKeranjang()" class="flex-1 py-3 wa-green text-white rounded-xl font-bold uppercase text-xs">Tambah</button>
         </div>
+
+        <div id="capture-area" class="absolute inset-0 z-[100] opacity-0 pointer-events-none"></div>
     </div>
 </div>
 
@@ -430,24 +432,26 @@
             } else { alert("Isi data!"); }
         }
 
-        function pilihProduk(idx) {
+        async function pilihProduk(idx) {
     produkDipilih = listProduk[idx];
     document.getElementById('qty-nama-produk').innerText = produkDipilih[1];
     
     const slider = document.getElementById('qty-slider');
     const linkGambar = produkDipilih[4] || "";
-    // Membersihkan link gambar dan memisahkannya
     const daftarGambar = linkGambar.split(',').map(s => s.trim()).filter(s => s !== "");
     
+    // MODIFIKASI: Menggunakan Proxy Weserv agar gambar bisa diproses html2canvas (menghindari CORS)
     if (daftarGambar.length === 0) {
-        slider.innerHTML = `<img src="https://placehold.co/400x400?text=No+Image">`;
+        slider.innerHTML = `<img src="https://placehold.co/400x400?text=No+Image" crossOrigin="anonymous">`;
     } else {
-        slider.innerHTML = daftarGambar.map(url => 
-            `<img src="${url}" onerror="this.src='https://placehold.co/400x400?text=Error+Image'">`
-        ).join('');
+        slider.innerHTML = daftarGambar.map(url => {
+            // Kita bungkus URL gambar dengan proxy weserv
+            const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
+            return `<img src="${proxyUrl}" crossOrigin="anonymous" onerror="this.src='https://placehold.co/400x400?text=Error+Image'">`;
+        }).join('');
     }
 
-    // Indikator Titik (Dots)
+    // Indikator Titik (Dots) - Tetap sama seperti kode Anda
     const existingDots = document.querySelector('.slider-dots');
     if (existingDots) existingDots.remove();
 
@@ -457,7 +461,6 @@
         dotsHtml += '</div>';
         slider.insertAdjacentHTML('afterend', dotsHtml);
 
-        // Update dot saat scroll
         slider.onscroll = () => {
             const width = slider.clientWidth;
             const index = Math.round(slider.scrollLeft / width);
@@ -465,6 +468,52 @@
             dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
         };
     }
+
+    // Tampilkan Harga
+    const harga = Number(produkDipilih[7]).toLocaleString();
+    const satuan = produkDipilih[3] || "pcs";
+    document.getElementById('qty-harga-display').innerText = `Rp ${harga} / ${satuan}`;
+
+    // Reset Input & Buka Modal
+    document.getElementById('input-qty').value = "";
+    document.getElementById('modal-qty').classList.add('active');
+
+    // --- LOGIKA BARU: GENERATE GAMBAR UNTUK SHARE ---
+    // Beri jeda 800ms agar gambar ter-load sempurna sebelum "difoto"
+    setTimeout(() => {
+        generateKartuProduk();
+    }, 800);
+}
+
+// Fungsi pendukung untuk membuat screenshot modal
+function generateKartuProduk() {
+    const areaModal = document.querySelector("#modal-qty .bg-white");
+    const captureArea = document.getElementById('capture-area');
+    
+    if (!captureArea) return; // Jaga-jaga jika ID belum dibuat di HTML
+
+    // Sembunyikan elemen yang tidak ingin ikut difoto (tombol & input)
+    const elemenSembunyi = areaModal.querySelectorAll('button, input, .slider-dots, p.italic');
+    elemenSembunyi.forEach(el => el.style.visibility = "hidden");
+
+    html2canvas(areaModal, { 
+        useCORS: true,
+        allowTaint: true,
+        scale: 2, // Biar hasil gambarnya tajam
+        backgroundColor: "#ffffff"
+    }).then(canvas => {
+        const imageBase64 = canvas.toDataURL("image/png");
+        
+        // Masukkan hasil screenshot ke dalam layer transparan di atas modal
+        captureArea.innerHTML = `<img src="${imageBase64}" style="width:100%; height:100%; object-fit:contain;">`;
+        captureArea.classList.remove('pointer-events-none');
+        
+        // Tampilkan kembali elemen yang tadi disembunyikan di modal asli
+        elemenSembunyi.forEach(el => el.style.visibility = "visible");
+    }).catch(err => {
+        console.error("Gagal generate gambar:", err);
+    });
+}
 
     const harga = Number(produkDipilih[7]).toLocaleString();
     const satuan = produkDipilih[3] || "pcs";
