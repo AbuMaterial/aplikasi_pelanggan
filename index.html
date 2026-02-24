@@ -432,7 +432,10 @@
             } else { alert("Isi data!"); }
         }
 
-        async function pilihProduk(idx) {
+        // --- FUNGSI PILIH PRODUK (VERSI RAPI) ---
+function pilihProduk(idx) {
+    if (!listProduk[idx]) return;
+    
     produkDipilih = listProduk[idx];
     document.getElementById('qty-nama-produk').innerText = produkDipilih[1];
     
@@ -440,18 +443,17 @@
     const linkGambar = produkDipilih[4] || "";
     const daftarGambar = linkGambar.split(',').map(s => s.trim()).filter(s => s !== "");
     
-    // MODIFIKASI: Menggunakan Proxy Weserv agar gambar bisa diproses html2canvas (menghindari CORS)
+    // Render Gambar dengan Proxy Weserv agar bisa 'difoto'
     if (daftarGambar.length === 0) {
         slider.innerHTML = `<img src="https://placehold.co/400x400?text=No+Image" crossOrigin="anonymous">`;
     } else {
         slider.innerHTML = daftarGambar.map(url => {
-            // Kita bungkus URL gambar dengan proxy weserv
             const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
             return `<img src="${proxyUrl}" crossOrigin="anonymous" onerror="this.src='https://placehold.co/400x400?text=Error+Image'">`;
         }).join('');
     }
 
-    // Indikator Titik (Dots) - Tetap sama seperti kode Anda
+    // Indikator Titik (Dots)
     const existingDots = document.querySelector('.slider-dots');
     if (existingDots) existingDots.remove();
 
@@ -478,41 +480,40 @@
     document.getElementById('input-qty').value = "";
     document.getElementById('modal-qty').classList.add('active');
 
-    // --- LOGIKA BARU: GENERATE GAMBAR UNTUK SHARE ---
-    // Beri jeda 800ms agar gambar ter-load sempurna sebelum "difoto"
+    // Auto focus ke input jumlah
     setTimeout(() => {
-        generateKartuProduk();
-    }, 800);
+        const inputQty = document.getElementById('input-qty');
+        inputQty.focus();
+    }, 400);
+
+    // Jalankan pengambilan screenshot setelah modal & gambar stabil
+    setTimeout(generateKartuProduk, 1000);
 }
 
-// Fungsi pendukung untuk membuat screenshot modal
+// --- FUNGSI GENERATE SCREENSHOT ---
 function generateKartuProduk() {
     const areaModal = document.querySelector("#modal-qty .bg-white");
     const captureArea = document.getElementById('capture-area');
     
-    if (!captureArea) return; // Jaga-jaga jika ID belum dibuat di HTML
+    if (!areaModal || !captureArea) return;
+    if (typeof html2canvas === 'undefined') return;
 
-    // Sembunyikan elemen yang tidak ingin ikut difoto (tombol & input)
+    // Sembunyikan elemen yang tidak ingin difoto
     const elemenSembunyi = areaModal.querySelectorAll('button, input, .slider-dots, p.italic');
     elemenSembunyi.forEach(el => el.style.visibility = "hidden");
 
     html2canvas(areaModal, { 
         useCORS: true,
-        allowTaint: true,
-        scale: 2, // Biar hasil gambarnya tajam
+        scale: 2,
         backgroundColor: "#ffffff"
     }).then(canvas => {
         const imageBase64 = canvas.toDataURL("image/png");
-        
-        // Masukkan hasil screenshot ke dalam layer transparan di atas modal
         captureArea.innerHTML = `<img src="${imageBase64}" style="width:100%; height:100%; object-fit:contain;">`;
         captureArea.classList.remove('pointer-events-none');
         
-        // Tampilkan kembali elemen yang tadi disembunyikan di modal asli
+        // Munculkan kembali elemen asli
         elemenSembunyi.forEach(el => el.style.visibility = "visible");
-    }).catch(err => {
-        console.error("Gagal generate gambar:", err);
-    });
+    }).catch(err => console.log("Gagal buat gambar:", err));
 }
 
     const harga = Number(produkDipilih[7]).toLocaleString();
