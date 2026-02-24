@@ -516,20 +516,7 @@ function generateKartuProduk() {
     }).catch(err => console.log("Gagal buat gambar:", err));
 }
 
-    const harga = Number(produkDipilih[7]).toLocaleString();
-    const satuan = produkDipilih[3] || "pcs";
-    document.getElementById('qty-harga-display').innerText = `Rp ${harga} / ${satuan}`;
-
-    document.getElementById('input-qty').value = "";
-    document.getElementById('modal-qty').classList.add('active');
     
-    // Auto focus ke input jumlah
-    setTimeout(() => {
-        const inputQty = document.getElementById('input-qty');
-        inputQty.focus();
-        inputQty.click(); // Penting untuk mobile agar keyboard muncul
-    }, 400);
-}
         function tutupQty() { document.getElementById('modal-qty').classList.remove('active'); }
         function tambahkanKeKeranjang() {
             const qty = document.getElementById('input-qty').value;
