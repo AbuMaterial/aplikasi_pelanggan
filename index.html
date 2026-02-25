@@ -369,12 +369,20 @@
         }
 
         function logicCari(q) {
-    // Filter dari listProduk yang sudah urut abjad
-    const hasil = listProduk.filter(p => p[1].toLowerCase().includes(q.toLowerCase()));
+    // 1. Pecah input pencarian menjadi potongan kata (lowercase)
+    const kataKunci = q.toLowerCase().split(" ").filter(k => k.trim() !== "");
+
+    // 2. Filter listProduk
+    const hasil = listProduk.filter(p => {
+        const namaProduk = p[1].toLowerCase();
+        // Cek apakah SETIAP kata kunci ada di dalam nama produk
+        return kataKunci.every(kata => namaProduk.includes(kata));
+    });
     
+    // 3. Render hasil ke layar
     renderProduk(hasil);
     
-    // ... (logika menampilkan tombol manual tetap sama) ...
+    // 4. Logika menampilkan tombol manual jika tidak ketemu
     const areaKosong = document.getElementById('hasil-kosong');
     const containerProd = document.getElementById('container-produk');
     const btnSticky = document.getElementById('btn-manual-sticky');
@@ -386,7 +394,10 @@
     } else {
         areaKosong.classList.add('hidden');
         containerProd.classList.remove('hidden');
-        if(!document.getElementById('content-katalog').classList.contains('hidden')) btnSticky.classList.remove('hidden');
+        // Hanya munculkan tombol sticky jika di tab katalog
+        if(!document.getElementById('content-katalog').classList.contains('hidden')) {
+            btnSticky.classList.remove('hidden');
+        }
     }
 }
 
